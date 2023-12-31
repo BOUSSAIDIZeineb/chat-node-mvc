@@ -1,0 +1,83 @@
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel='stylesheet' href='/stylesheets/style2.css' />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    {% block body %}{% endblock %}
+</body>
+</html>
+
+{% block body %}
+    <div id="chat-container">
+        <h1>Our Chat</h1>
+        <div id="chat-messages"></div>
+        <div id="message-box">
+            <input type="text" onkeyup="isTyping()" id="msg" placeholder="Type a message...">
+            <button onclick="sendMsg()" id="send-button"><i class="fas fa-arrow-right fa-lg"></i> Send</button> <!-- Added larger arrow icon and "Send" text -->
+        </div>
+        <div id="typing-indicator"></div>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var name = prompt("Enter your name !");
+            var socket = io({ query: { username: name } });
+
+            socket.on("msg", function(data) {
+                var messageData = JSON.parse(data);
+                var chatMessages = document.getElementById("chat-messages");
+                var chatBubble = document.createElement("div");
+                chatBubble.className = "message";
+                
+                if (messageData.username === name) {
+                    chatBubble.classList.add("self");
+                }
+
+                chatBubble.innerHTML = "<p><strong>" + messageData.username + ':</strong> ' + messageData.message + "</p>";
+                chatMessages.appendChild(chatBubble);
+            });
+
+            socket.on("join", function(data) {
+                var chatMessages = document.getElementById("chat-messages");
+                var joinMessage = document.createElement("div");
+                joinMessage.className = "system-message";
+                joinMessage.innerHTML = "<p>" + data + " joined the chat</p>";
+                chatMessages.appendChild(joinMessage);
+            });
+
+            socket.on("leave", function(data) {
+                var chatMessages = document.getElementById("chat-messages");
+                var leaveMessage = document.createElement("div");
+                leaveMessage.className = "system-message";
+                leaveMessage.innerHTML = "<p>" + data + " left the chat</p>";
+                chatMessages.appendChild(leaveMessage);
+            });
+
+            function sendMsg() {
+                var input = document.getElementById("msg");
+                if (input.value) {
+                    var messageData = {
+                        username: name,
+                        message: input.value
+                    };
+                    socket.emit("send-msg", JSON.stringify(messageData));
+                    input.value = '';
+                }
+            }
+
+            function isTyping() {
+                var data = name + " is typing...";
+                console.log(data);
+                socket.emit("uTyping", data);
+            }
+
+            socket.on("msg-typing", function(data) {
+                var typingIndicator = document.getElementById("typing-indicator");
+                typingIndicator.innerHTML = data;
+                setTimeout(function() {
+                    typingIndicator.innerHTML = '';
+                }, 2000);
+            });
+        </script>
+    </div>
+{% endblock %}
